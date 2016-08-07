@@ -1,0 +1,169 @@
+---
+title: 'Practical Machine Learning Project: Physical Activity'
+author: "Ryan"
+date: "August 7, 2016"
+output: html_document
+---
+
+#Quality of Physical Activity as Measured by Personal Activity Monitors
+
+##Introduction   
+The purpose of this project is to be able to predict how well a person is performing an activity based on the measurements recorded by a personal activity monitor.  Using already collected data from Velloso, et al. (2013) a training dataset of 19,622 measrements from 6 individuals was used to create a prediction algorithm for the classe variable.  The classe variable was based on the observations of how well the 6 individuals completed the activities [link](http://groupware.les.inf.puc-rio.br/har).  
+
+##Method  
+###Splitting dataset
+The first step was to split the "training" set into a new training set and a testing set for cross-validation.  The training set included 75% of the 19,622 (n=14,718).  The testing set included n=4904.  I then looked at the dataset structure and a summary of columns.   
+
+###Summary of Data
+The first seven columns were administrative variables, such as time and user name and were removed from the analysis.  When looking at the summary there were variables that were majority missing data (i.e. NA for most observations).  These variables were the kurtosis, skewness, max, min, amplitude, variance, average, and standard deviation.  Looking at the dataset itself these variables only had data when new window was equal to yes. So rows with new window = yes were the summaries of the previous activity monitor.  I chose to remove the new window = yes to only concentrate on the raw data.  Subsetting the training set to new window = no reduced the total n to 14,417.  Removing the summary variables reduced the total columns to 53 (including the classe variable). 
+
+###Feature Plots and Near Zero Variable
+Feature plots were created for the 52 remaining variables.  The feature plots I looked at were boxplots by the classe variables. Two examples of the feature plots are included in the Feature Plots Appendix. I also ran nearZeroVar on the 52 variables to check if there were a lot of zeros. The table of the nearZeroVar is included in the NearZeroVar Appendix.   
+
+###Prediction
+All 52 variables were then used in the prediction algorithm. Random forest prediction was used as the prediction algorithm given the accuracy of the prediction algorithm. I did not use the prox=TRUE to cut down on the time spent on running the algorithm. 
+
+###Cross-Validation
+Once the prediction algorithm was completed the test set I created (n=4904) was used for cross-validation.  The test set was subsetted in the same way as the training set, including rows where new window = no, reducing the n to 4799.   
+
+##Results
+Using the random forests prediction algorithm the number of repeated trees in the final model was mtry = 2.  The optimal model was based on accuracy.  The table given in the final model:
+
+####Table 1: Accuracy and Kappa
+mtry  |  Accuracy  | Kappa
+----- | ---------- | ---------
+2     | 0.9904806  | 0.9879542
+27    | 0.9904457  | 0.9879105
+52    | 0.9822727  | 0.9775685
+
+###Prediction
+Running the prediction model on the cross-validation testing set the accuracy was 0.9952.  The table of actual classe variables vs. predicted classe from the testing set:
+
+####Table 2: Testing Prediction
+pred  |  A   |  B  |  C  |  D  |  E
+----- | ---  | --- | --- | --- | ---
+A     | 1366 |  2  |  0  |  0  |  0
+B     |  1   | 920 |  6  |  0  |  0
+C     |  0   |  3  | 828 |  7  |  2
+D     |  0   |  0  |  1  | 780 |  1
+E     |  0   |  0  |  0  |  0  | 882
+
+The predictions that were incorrect were, for the most part, off by only one class.  The only exceptions were two classes that were actually class E, but predicted as class C.  
+
+##Discussion
+
+The purpose of this assignment was to run a real world experiment in prediction and machine learning.  The first lesson was in splitting the training set into a smaller training and a cross-validation testing set to be able to test the model.  Looking at the summary and plots of the dataset variables was also important in cutting down the variables needed.  The random forest prediction algorithm gives highly accurate results, but is a very slow model to run. 
+
+
+##Reference   
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013.
+
+##Feature Plot Appendix
+```{r, echo=FALSE}
+library(caret)
+
+training <- read.csv('./pml-training.csv')
+testing <- read.csv('./pml-testing.csv')
+set.seed(1256)
+##split training into training set and cross-validation set
+inTrain <- createDataPartition(training$classe, p=3/4, list=FALSE)
+trainSet <- training[inTrain,]
+testSet <- training[-inTrain,]
+featurePlot(x=trainSet[,c("roll_belt","pitch_belt","yaw_belt","total_accel_belt")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("gyros_belt_x","gyros_belt_y","gyros_belt_z")],y=trainSet$classe,plot="box")
+```
+
+##NearZeroVar Appendix
+```{r, echo=FALSE}
+
+##Only use new window == no
+subsetTrainSet <- trainSet[trainSet$new_window == "no",]
+
+##Subset out the 53 columns needed for prediction
+subsetTrainSet <- subsetTrainSet[,c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z", "accel_belt_x", "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z", "roll_arm", "pitch_arm", "yaw_arm", "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z", "accel_arm_x", "accel_arm_y", "accel_arm_z", "magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "total_accel_dumbbell", "gyros_dumbbell_x", "gyros_dumbbell_y", "gyros_dumbbell_z", "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z", "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "roll_forearm", "pitch_forearm", "yaw_forearm", "total_accel_forearm", "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z", "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z", "classe")]
+
+
+nzv <- nearZeroVar(subsetTrainSet,saveMetrics=TRUE)
+nzv
+```
+
+##R Code Appendix
+###Preproccessing the Data
+```{r, echo=TRUE, eval=FALSE}
+library(caret)
+##reading in the training and testing files given by Coursera
+training <- read.csv('./pml-training.csv')
+testing <- read.csv('./pml-testing.csv')
+##table of the classe variable in the training set
+table(training$classe)
+##set seed for program
+set.seed(1256)
+##split training into training set and cross-validation set
+inTrain <- createDataPartition(training$classe, p=3/4, list=FALSE)
+trainSet <- training[inTrain,]
+testSet <- training[-inTrain,]
+
+##Look at structure of the dataset
+str(trainSet,list.len=ncol(trainSet))
+
+##Summary of variables
+summary(trainSet)
+
+##Feature Plots of the other 52 variables
+featurePlot(x=trainSet[,c("roll_belt","pitch_belt","yaw_belt","total_accel_belt")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("gyros_belt_x","gyros_belt_y","gyros_belt_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("accel_belt_x","accel_belt_y","accel_belt_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("magnet_belt_x", "magnet_belt_y","magnet_belt_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("roll_arm","pitch_arm","yaw_arm","total_accel_arm")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("gyros_arm_x","gyros_arm_y","gyros_arm_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("accel_arm_x","accel_arm_y","accel_arm_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("magnet_arm_x","magnet_arm_y","magnet_arm_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("roll_arm","pitch_dumbbell","yaw_dumbbell","total_accel_dumbbell")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("roll_dumbbell","pitch_dumbbell","yaw_dumbbell","total_accel_dumbbell")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z")],y=trainSet$classe,plot="box")
+
+featurePlot(x=trainSet[,c("roll_forearm","pitch_forearm","yaw_forearm","total_accel_forearm")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("gyros_forearm_x","gyros_forearm_y","gyros_forearm_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("accel_forearm_x", "accel_forearm_y", "accel_forearm_z")],y=trainSet$classe,plot="box")
+featurePlot(x=trainSet[,c("magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z")],y=trainSet$classe,plot="box")
+
+##Only use new window == no
+subsetTrainSet <- trainSet[trainSet$new_window == "no",]
+
+##Subset out the 53 columns needed for prediction
+subsetTrainSet <- subsetTrainSet[,c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z", "accel_belt_x", "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z", "roll_arm", "pitch_arm", "yaw_arm", "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z", "accel_arm_x", "accel_arm_y", "accel_arm_z", "magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "total_accel_dumbbell", "gyros_dumbbell_x", "gyros_dumbbell_y", "gyros_dumbbell_z", "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z", "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "roll_forearm", "pitch_forearm", "yaw_forearm", "total_accel_forearm", "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z", "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z", "classe")]
+
+##Check if any covariates are near zero
+nzv <- nearZeroVar(subsetTrainSet,saveMetrics=TRUE)
+nzv
+
+```
+
+###Predicting
+```{r, echo=TRUE, eval=FALSE}
+#Predict on training set using random forests
+modFit <- train(classe~.,data=subsetTrainSet,method="rf")
+##Look at model fit
+modFit
+```
+
+###Cross-Validation
+```{r, echo=TRUE, eval=FALSE}
+##Subset test set in the same way as training set
+subsetTestSet <- testSet[testSet$new_window == "no",]
+subsetTestSet <- subsetTestSet[,c("roll_belt", "pitch_belt", "yaw_belt", "total_accel_belt", "gyros_belt_x", "gyros_belt_y", "gyros_belt_z", "accel_belt_x", "accel_belt_y", "accel_belt_z", "magnet_belt_x", "magnet_belt_y", "magnet_belt_z", "roll_arm", "pitch_arm", "yaw_arm", "total_accel_arm", "gyros_arm_x", "gyros_arm_y", "gyros_arm_z", "accel_arm_x", "accel_arm_y", "accel_arm_z", "magnet_arm_x", "magnet_arm_y", "magnet_arm_z", "roll_dumbbell", "pitch_dumbbell", "yaw_dumbbell", "total_accel_dumbbell", "gyros_dumbbell_x", "gyros_dumbbell_y", "gyros_dumbbell_z", "accel_dumbbell_x", "accel_dumbbell_y", "accel_dumbbell_z", "magnet_dumbbell_x", "magnet_dumbbell_y", "magnet_dumbbell_z", "roll_forearm", "pitch_forearm", "yaw_forearm", "total_accel_forearm", "gyros_forearm_x", "gyros_forearm_y", "gyros_forearm_z", "accel_forearm_x", "accel_forearm_y", "accel_forearm_z", "magnet_forearm_x", "magnet_forearm_y", "magnet_forearm_z", "classe")]
+
+str(subsetTestSet)
+```
+
+##Predicting on the Cross-Validation
+```{r,echo=TRUE,eval=FALSE}
+pred <- predict(modFit,subsetTestSet)
+subsetTestSet$predRight <- pred==subsetTestSet$classe
+table(pred,subsetTestSet$classe)
+```
+
+
